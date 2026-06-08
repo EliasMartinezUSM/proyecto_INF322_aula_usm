@@ -2,6 +2,12 @@ import React, { useState, useMemo } from 'react';
 import Header from './components/Header';
 import CourseFilters from './components/CourseFilters';
 import CourseGrid from './components/CourseGrid';
+import ProfilePage from './components/ProfilePage';
+import CalendarPage from './components/CalendarPage'; 
+import CoursePage from './components/CoursePage'; // Importación de la página del curso
+import DocumentsPage from './components/DocumentsPage';
+import coursesData from './data/courses.json';
+
 import './app.css';
 
 function App() {
@@ -10,85 +16,19 @@ function App() {
   const [selectedSemester, setSelectedSemester] = useState('');
   const [sortBy, setSortBy] = useState('default');
   const [viewMode, setViewMode] = useState('grid');
-
-  const coursesData = [
-    {
-      id: 1,
-      code: '202601',
-      courseCode: 'TEL360',
-      name: 'PENSAMIENTO DE DISEÑO EN INGENIERÍA',
-      category: 'ELECTRONICA',
-      parallel: 'Paralelos:1',
-      image: 'electronics',
-      department: 'ELECTRONICA',
-      semester: '2026-01'
-    },
-    {
-      id: 2,
-      code: '202601',
-      courseCode: 'TEL341',
-      name: 'SIMULACIÓN DE REDES',
-      category: 'ELECTRONICA',
-      parallel: 'Paralelos:1',
-      image: 'electronics',
-      department: 'ELECTRONICA',
-      semester: '2026-01'
-    },
-    {
-      id: 3,
-      code: '202601',
-      courseCode: 'TEL312',
-      name: 'SEGURIDAD EN REDES DE COMPUTADORES',
-      category: 'ELECTRONICA',
-      parallel: 'Paralelos:1',
-      image: 'electronics',
-      department: 'ELECTRONICA',
-      semester: '2026-01'
-    },
-    {
-      id: 4,
-      code: '202601',
-      courseCode: 'TEL241',
-      name: 'LABORATORIO DE REDES DE COMPUTADORES',
-      category: 'ELECTRONICA',
-      parallel: 'Paralelos:1',
-      image: 'electronics',
-      department: 'ELECTRONICA',
-      semester: '2026-01'
-    },
-    {
-      id: 5,
-      code: '202601',
-      courseCode: 'TEL236',
-      name: 'REDES DE ACCESO Y COMUNICACIONES ÓPTICAS',
-      category: 'ELECTRONICA',
-      parallel: 'Paralelos:1',
-      image: 'electronics',
-      department: 'ELECTRONICA',
-      semester: '2026-01'
-    },
-    {
-      id: 6,
-      code: '202601',
-      courseCode: 'INF322',
-      name: 'DISEÑO DE INTERFACES USUARIAS',
-      category: 'INFORMATICA',
-      parallel: 'Paralelos:1',
-      image: 'informatics',
-      department: 'INFORMATICA',
-      semester: '2026-01'
-    }
-  ];
+  const [showProfile, setShowProfile] = useState(false);
+  const [currentView, setCurrentView] = useState('home'); // Vista activa: 'home', 'calendar' o 'course'
+  const [selectedCourse, setSelectedCourse] = useState(null); // Almacena el curso clickeado
 
   // Extraer departamentos y semestres únicos
-  const departments = [...new Set(coursesData.map(c => c.department))];
-  const semesters = [...new Set(coursesData.map(c => c.semester))];
+  const departments = [...new Set(coursesData.courses.map(c => c.department))].sort();
+  const semesters = [...new Set(coursesData.courses.map(c => c.semester))].sort();
 
   // Filtrar y ordenar cursos
   const filteredAndSortedCourses = useMemo(() => {
-    let filtered = coursesData.filter(course => {
+    let filtered = coursesData.courses.filter(course => {
       const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           course.courseCode.toLowerCase().includes(searchTerm.toLowerCase());
+                            course.courseCode.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesDepartment = selectedDepartment === '' || course.department === selectedDepartment;
       const matchesSemester = selectedSemester === '' || course.semester === selectedSemester;
       
@@ -113,30 +53,73 @@ function App() {
     }
   };
 
+  // Manejador para abrir un curso específico desde la grilla
+  const handleSelectCourse = (course) => {
+    setSelectedCourse(course);
+    setCurrentView('course');
+  };
+
   return (
     <div className="app-container">
-      <Header onSearch={setSearchTerm} />
+      {showProfile && <ProfilePage onClose={() => setShowProfile(false)} />}
+      
+     <Header 
+  onSearch={setSearchTerm}
+  onProfileClick={() => setCurrentView(currentView === 'calendar' ? 'home' : 'calendar')} 
+  onLogoClick={() => setCurrentView('home')} 
+  onDocumentsClick={() => setCurrentView('documents')}
+  currentView={currentView} // ← NUEVA PROP: Le avisa al Header la vista actual
+/>
+      
       <main className="main-content">
-        <section className="welcome-section">
-          <h1 className="welcome-title">Bienvenidos</h1>
-        </section>
+        {/* CASO 1: Calendario */}
+        {currentView === 'calendar' && <CalendarPage />}
 
-        <section className="courses-section">
-          <h2 className="courses-title">Mis cursos</h2>
-          <CourseFilters 
-            onFilterChange={handleFilterChange}
-            onSortChange={setSortBy}
-            onViewChange={setViewMode}
-            currentSort={sortBy}
-            currentView={viewMode}
-            departments={departments}
-            semesters={semesters}
+        {/* CASO 2: Detalle del Curso */}
+        {currentView === 'course' && (
+          <CoursePage 
+            courseName={selectedCourse?.name}
+            courseCode={selectedCourse?.courseCode}
           />
-          <CourseGrid 
-            courses={filteredAndSortedCourses}
-            viewMode={viewMode}
-          />
-        </section>
+        )}
+
+        {/* NUEVO CASO 3: Pestaña Nueva de Documentos */}
+        {currentView === 'documents' && (
+  <DocumentsPage />
+)}
+
+        {/* CASO 4: Home (Mis Cursos) */}
+        {currentView === 'home' && (
+          <>
+            <section className="welcome-section">
+              <h1 className="welcome-title" style={{ cursor: 'pointer' }} onClick={() => setCurrentView('home')}>
+                Bienvenidos
+              </h1>
+            </section>
+
+            <section className="courses-section">
+              <h2 className="courses-title">Mis cursos</h2>
+              <CourseFilters 
+                onFilterChange={handleFilterChange}
+                onSortChange={setSortBy}
+                onViewChange={setViewMode}
+                currentSort={sortBy}
+                currentView={viewMode}
+                departments={departments}
+                semesters={semesters}
+              />
+              <div 
+                onClick={() => handleSelectCourse({ name: 'DISEÑO DE INTERFACES USUARIAS', courseCode: '(202601)(INF322)' })}
+                style={{ cursor: 'pointer' }}
+              >
+                <CourseGrid 
+                  courses={filteredAndSortedCourses}
+                  viewMode={viewMode}
+                />
+              </div>
+            </section>
+          </>
+        )}
       </main>
     </div>
   );
